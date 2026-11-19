@@ -1,36 +1,105 @@
-// A working gta6-trophy-guide-01 entry (Node 22, standard library only): the guide is this directory's app/ folder,
-// plain static files a browser opens at app/index.html (ES modules, CSS, no build step), offline: it loads nothing
-// over the network, and its trophy list and guides are app/data/trophies.json. The program hands it in: it copies app/
-// and screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the judge reads (your
-// screenshots, the first load's files and bytes, and your source), with the vendored make.fun library. Leave
-// vendor/makefun-frontend.ts as it is: the scorer requires dossier.json to be byte for byte what its own copy writes.
-//
-// Only the plumbing, not a winner: a plain checklist of the 55 trophies with a one-line hint each. Write a real guide
-// for every trophy in your own words, a roadmap to the platinum, filters and a spoiler setting in app/, put 3 or 4 PNG
-// or JPEG screenshots of it in screenshots/ (the first by name is the cover; shots.json says which views this
-// starter's were taken of), and run it.
-//
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
-// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+#!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { buildDossier } from './vendor/makefun-frontend.ts';
+import { readFile, writeFile, copyFile, mkdir, readdir, stat } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const here = fileURLToPath(new URL('.', import.meta.url));
-const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+// Resolve the repository root from the script's location
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = __dirname;
 
-mkdirSync(out, { recursive: true });
-cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+// Helper function to recursively copy directories
+async function copyDir(src: string, dest: string) {
+  await mkdir(dest, { recursive: true });
+  const entries = await readdir(src);
+  
+  for (const entry of entries) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    
+    const stats = await stat(srcPath);
+    if (stats.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await copyFile(srcPath, destPath);
+    }
+  }
+}
 
-// The scorer's own caps (reference/gate.json): only text_max_bytes shapes the bytes; the others refuse an entry the
-// scorer would refuse (more than 4 screenshots or one over 256 KiB; more than 993 files and directories in app/ or
-// 48 MiB of app files: app/ counts beside /output's own 1000-entry cap, its screenshots/ and dossier.json).
-writeFileSync(
-  join(out, 'dossier.json'),
-  buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 4, max_bytes: 262144 }, app_max_files: 993, app_max_bytes: 50331648 }),
-);
+// Helper function to validate trophies file
+async function validateTrophies() {
+  const trophiesPath = join(repoRoot, 'app', 'data', 'trophies.json');
+  try {
+    const trophiesData = await readFile(trophiesPath, 'utf8');
+    const trophies = JSON.parse(trophiesData);
+    
+    if (!trophies.trophies || trophies.trophies.length < 55) {
+      throw new Error('Not enough trophies in the trophies file');
+    }
+    
+    return true;
+  } catch (error) {
+    throw new Error(`Invalid trophies file: ${error.message}`);
+  }
+}
+
+// Main function
+async function main() {
+  // Validate required files
+  const indexPath = join(repoRoot, 'app', 'index.html');
+  const trophiesPath = join(repoRoot, 'app', 'data', 'trophies.json');
+  
+  try {
+    await stat(indexPath);
+    await stat(trophiesPath);
+  } catch (error) {
+    throw new Error('Required files missing: index.html or trophies.json');
+  }
+  
+  // Validate trophies file
+  await validateTrophies();
+  
+  // Get output directory
+  const outputDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
+  
+  // Copy app/ directory
+  const appDest = join(outputDir, 'app');
+  await copyDir(join(repoRoot, 'app'), appDest);
+  
+  // Copy screenshots/ directory
+  const screenshotsSrc = join(repoRoot, 'screenshots');
+  try {
+    await stat(screenshotsSrc);
+    const screenshotsDest = join(outputDir, 'screenshots');
+    await copyDir(screenshotsSrc, screenshotsDest);
+  } catch (error) {
+    // screenshots directory might not exist, which is fine
+  }
+  
+  // Import buildDossier function
+  const { buildDossier } = await import('./vendor/makefun-frontend.ts');
+  
+  // Build dossier
+  const dossier = await buildDossier(outputDir, {
+    text_max_bytes: 163840,
+    screenshots: {
+      max: 4,
+      max_bytes: 262144
+    },
+    app_max_files: 993,
+    app_max_bytes: 50331648
+  });
+  
+  // Write dossier.json
+  const dossierPath = join(outputDir, 'dossier.json');
+  await writeFile(dossierPath, dossier);
+  
+  console.log('Build completed successfully');
+}
+
+// Run main function and handle errors
+main().catch(error => {
+  console.error('Build failed:', error);
+  process.exit(1);
+});

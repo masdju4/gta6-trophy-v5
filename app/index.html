@@ -1,25 +1,73 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GTA VI trophy checklist</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTA VI Trophy Guide & Tracker</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>GTA VI trophy checklist</h1>
-  <p id="progress">0 of 55 earned</p>
-</header>
-<div class="controls">
-  <label>Grade <select id="grade"><option value="all">All</option><option value="platinum">Platinum</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option></select></label>
-  <button id="export" type="button">Export progress</button>
-  <label class="import">Import progress <input id="import" type="file" accept="application/json"></label>
-</div>
-<table>
-  <thead><tr><th>Earned</th><th>Trophy</th><th>Grade</th><th>How to get it</th></tr></thead>
-  <tbody id="rows"></tbody>
-</table>
-<script type="module" src="app.js"></script>
+    <header>
+        <h1>GTA VI Trophy Guide & Tracker</h1>
+        <p class="progress-readout">Progress: <span id="total-count">0</span>/<span id="total-trophies">0</span> trophies earned</p>
+        <div class="grade-legend">
+            <span class="grade-platinum">Platinum</span> | 
+            <span class="grade-gold">Gold</span> | 
+            <span class="grade-silver">Silver</span> | 
+            <span class="grade-bronze">Bronze</span>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        <button id="checklist-tab" class="tab-button active" data-target="checklist">Checklist</button>
+        <button id="roadmap-tab" class="tab-button" data-target="roadmap">Roadmap</button>
+        
+        <div class="toolbar-controls">
+            <label class="spoiler-switch">
+                <input type="checkbox" id="spoiler-toggle">
+                <span class="slider"></span>
+                <span class="switch-text">Spoiler Mode</span>
+            </label>
+            
+            <button id="export-btn">Export Progress</button>
+            <button id="import-btn">Import Progress</button>
+            <input type="file" id="import-input" accept=".json" style="display: none;">
+            <button id="reset-btn">Reset All</button>
+        </div>
+    </div>
+
+    <div class="filter-pills">
+        <button class="filter-pill active" data-filter="all">All</button>
+        <button class="filter-pill" data-filter="story">Story</button>
+        <button class="filter-pill" data-filter="collectible">Collectible</button>
+        <button class="filter-pill" data-filter="activity">Activity</button>
+        <button class="filter-pill" data-filter="online">Online</button>
+        <button class="filter-pill" data-filter="missable">Missable</button>
+        <button class="filter-pill" data-filter="unearned">Unearned</button>
+    </div>
+
+    <main>
+        <div class="main-content">
+            <div id="checklist-container" class="trophy-list-container">
+                <!-- Trophy checklist will be populated here -->
+            </div>
+            <div id="detail-panel" class="detail-panel-container">
+                <!-- Trophy detail panel will be populated here -->
+            </div>
+        </div>
+    </main>
+
+    <section id="roadmap-section" class="roadmap-section">
+        <h2>Platinum Roadmap</h2>
+        <div id="roadmap-container" class="roadmap-container">
+            <!-- Roadmap content will be populated here -->
+        </div>
+    </section>
+
+    <footer>
+        <p>This guide is unofficial and fully offline. All trophy data is stored locally in your browser.</p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
 </body>
 </html>
